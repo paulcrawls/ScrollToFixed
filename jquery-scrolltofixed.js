@@ -54,13 +54,19 @@
         var spacer = null;
 
         var spacerClass;
+        var spacerDisplay;
 
         var className;
+		var baseClassName;
 
         // Capture the original offsets for the target element. This needs to be
         // called whenever the page size changes or when the page is first
         // scrolled. For some reason, calling this before the page is first
         // scrolled causes the element to become fixed too late.
+
+
+        var fixedTop = offsetTop;
+
         function resetScroll() {
             // Set the element to it original positioning.
             target.trigger('preUnfixed.ScrollToFixed');
@@ -129,8 +135,14 @@
             if (!isFixed()) {
                 // Set the spacer to fill the height and width of the target
                 // element, then display it.
+                var spacerDisplay;
+                if (base.options.spacerDisplay == '') {
+                    spacerDisplay = target.css('display');
+                } else {
+                    spacerDisplay = base.options.spacerDisplay;
+                }
                 spacer.css({
-                    'display' : target.css('display'),
+                    'display' : spacerDisplay,
                     'width' : target.outerWidth(true),
                     'height' : target.outerHeight(true),
                     'float' : target.css('float')
@@ -151,8 +163,12 @@
 
                 target.css(cssOptions);
                 
+				// Set parent height before fixing to prevent twitching
+                target.parent().css('min-height',target.parent().height());
+                target.css('min-height',target.height());
+
                 target.addClass(base.options.baseClassName);
-                
+
                 if (base.options.className) {
                     target.addClass(base.options.className);
                 }
@@ -207,6 +223,8 @@
                 });
 
                 target.removeClass('scroll-to-fixed-fixed');
+                target.css('min-height','auto');
+                target.parent().css('min-height','auto');
 
                 if (base.options.className) {
                     target.removeClass(base.options.className);
@@ -273,6 +291,11 @@
             // If the vertical scroll position, plus the optional margin, would
             // put the target element at the specified limit, set the target
             // element to absolute.
+
+            fixedTop = offsetTop;
+            if (base.options.startFixed) {
+                fixedTop = base.options.startFixed;
+            }
             if (base.options.minWidth && $(window).width() < base.options.minWidth) {
                 if (!isUnfixed() || !wasReset) {
                     postPosition();
@@ -301,7 +324,7 @@
                 // If the vertical scroll position, plus the optional margin, would
                 // put the target element above the top of the page, set the target
                 // element to fixed.
-                } else if (y >= offsetTop - getMarginTop()) {
+                } else if (y >= fixedTop - getMarginTop()) {
                     if (!isFixed() || !wasReset) {
                         postPosition();
                         target.trigger('preFixed.ScrollToFixed');
@@ -434,7 +457,7 @@
             // Capture the options for this plugin.
             base.options = $.extend({}, $.ScrollToFixed.defaultOptions, options);
 
-            originalZIndex = target.css('z-index')
+            originalZIndex = target.css('z-index');
 
             // Turn off this functionality for devices that do not support it.
             // if (!(base.options && base.options.dontCheckForPositionFixedSupport)) {
@@ -447,9 +470,12 @@
             // to fixed.
             base.$el.css('z-index', base.options.zIndex);
 
+            // Remove old spacers for clearance
+            $('.' + base.options.spacerClass).remove();
             // Create a spacer element to fill the void left by the target
             // element when it goes fixed.
-            spacer = $('<div />');
+
+            spacer = $('<div class="' + base.options.spacerClass + '" />');
 
             position = target.css('position');
             originalPosition = target.css('position');
@@ -545,7 +571,10 @@
         limit : 0,
         bottom : -1,
         zIndex : 1000,
-        baseClassName: 'scroll-to-fixed-fixed'
+		baseClassName: 'scroll-to-fixed-fixed'
+		startFixed : 0,
+        spacerDisplay : '',
+        spacerClass : 'scroll-to-fixed-spacer'
     };
 
     // Returns enhanced elements that will fix to the top of the page when the
